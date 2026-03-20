@@ -61,8 +61,8 @@ See [PLANNING.md](PLANNING.md) for the full list of environment variables.
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py loaddata sample_trips
@@ -77,7 +77,7 @@ npm install
 npm run dev
 ```
 
-The frontend dev server proxies `/api` requests to the backend (configured via `VITE_API_BASE_URL`, defaults to `http://localhost:8000/api/`).
+The Vite dev server proxies `/api` requests to `http://localhost:8000` (configured in `vite.config.ts`).
 
 ## API Endpoints
 
@@ -119,4 +119,15 @@ npm test
 ```
 
 - **Backend**: Models, serializers, views, services, and CardDetails all tested. Service tests use a `FakePaymentGateway` — no dependency on the legacy processor. Each test is isolated via Django `TestCase` transaction rollback.
-- **Frontend**: `wizardReducer` tested as a pure function (no DOM, no mocks). Component tests with React Testing Library. API client tested with mocked `fetch`.
+- **Frontend**: `wizardReducer` tested as a pure function (no DOM, no mocks). Component tests with React Testing Library.
+
+## AI Tool Usage
+
+Claude Code (Claude Opus 4.6) was used as a coding assistant throughout development for:
+
+- Writing boilerplate (models, serializers, test scaffolding)
+- Generating test cases from existing implementation code
+- Tailwind CSS utility class composition
+- Reviewing architecture decisions documented in PLANNING.md
+
+All code was reviewed and validated before committing. The planning, architecture decisions, and design patterns were human-directed.
