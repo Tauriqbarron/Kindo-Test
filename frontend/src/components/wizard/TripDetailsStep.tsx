@@ -12,11 +12,17 @@ export default function TripDetailsStep({ dispatch }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadTrips = () => {
+    setLoading(true);
+    setError(null);
     fetchTrips()
       .then(setTrips)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadTrips();
   }, []);
 
   if (loading) {
@@ -32,6 +38,12 @@ export default function TripDetailsStep({ dispatch }: Props) {
       <div className="rounded-lg border border-kindo-red/30 bg-red-50 p-4 text-center text-kindo-red">
         <p className="font-medium">Failed to load trips</p>
         <p className="mt-1 text-sm">{error}</p>
+        <button
+          onClick={loadTrips}
+          className="mt-3 rounded-lg bg-kindo-purple px-4 py-2 text-sm font-medium text-white transition hover:bg-kindo-purple-dark"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

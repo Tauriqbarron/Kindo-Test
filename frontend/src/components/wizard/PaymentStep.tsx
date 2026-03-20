@@ -80,12 +80,14 @@ export default function PaymentStep({ trip, registration, error, dispatch }: Pro
 
       <h2 className="mb-4 text-lg font-semibold text-kindo-gray-800">Payment Details</h2>
 
-      {error && (
-        <div className="mb-4 rounded-lg border border-kindo-red/30 bg-red-50 p-3 text-sm text-kindo-red">
-          {error}
-          <p className="mt-1 text-xs text-kindo-gray-500">Please check your details and try again.</p>
-        </div>
-      )}
+      <div aria-live="polite">
+        {error && (
+          <div role="alert" className="mb-4 rounded-lg border border-kindo-red/30 bg-red-50 p-3 text-sm text-kindo-red">
+            {error}
+            <p className="mt-1 text-xs text-kindo-gray-500">Please check your details and try again.</p>
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>

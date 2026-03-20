@@ -57,11 +57,13 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
 
       <h2 className="mb-4 text-lg font-semibold text-kindo-gray-800">Register Your Child</h2>
 
-      {serverError && (
-        <div className="mb-4 rounded-lg border border-kindo-red/30 bg-red-50 p-3 text-sm text-kindo-red">
-          {serverError}
-        </div>
-      )}
+      <div aria-live="polite">
+        {serverError && (
+          <div role="alert" className="mb-4 rounded-lg border border-kindo-red/30 bg-red-50 p-3 text-sm text-kindo-red">
+            {serverError}
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
