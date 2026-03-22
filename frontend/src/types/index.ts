@@ -42,12 +42,42 @@ export interface PaymentResult {
   registration_id?: string;
 }
 
+export interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
+export interface Child {
+  id: string;
+  name: string;
+  grade: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export interface DashboardRegistration {
+  id: string;
+  trip: { id: string; title: string; destination: string; date: string; cost: string };
+  student_name: string;
+  child_name: string;
+  status: 'pending' | 'confirmed' | 'failed' | 'cancelled';
+  payment_status: 'success' | 'failed' | 'pending' | null;
+  created_at: string;
+}
+
 export interface RegistrationFormData {
   trip: string;
-  student_name: string;
-  parent_name: string;
-  parent_email: string;
-  parent_phone: string;
+  student_name?: string;
+  parent_name?: string;
+  parent_email?: string;
+  parent_phone?: string;
+  child_id?: string;
 }
 
 export interface PaymentFormData {
