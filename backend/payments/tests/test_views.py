@@ -2,10 +2,13 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.test import TestCase
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from payments.models import Registration, Trip
+from accounts.models import Child
+from payments.models import Registration, Transaction, Trip
 
 
 def make_trip(**overrides):
@@ -191,3 +194,119 @@ class PaymentViewTest(TestCase):
         # Second payment for same registration should be rejected
         response = self.client.post('/api/payments/', data, format='json')
         self.assertEqual(response.status_code, 400)
+
+
+class AuthenticatedRegistrationTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.trip = make_trip()
+        self.user = User.objects.create_user(
+            username='sarah@example.com',
+            email='sarah@example.com',
+            password='SecurePass123!',
+            first_name='Sarah',
+            last_name='Wilson',
+        )
+        self.token = Token.objects.create(user=self.user)
+        self.child = Child.objects.create(parent=self.user, name='Emma Wilson', grade='Year 5')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+    def test_register_with_child_id(self):
+        response = self.client.post('/api/registrations/', {
+            'trip': str(self.trip.id),
+            'child_id': str(self.child.id),
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['student_name'], 'Emma Wilson')
+
+        reg = Registration.objects.get(id=response.data['id'])
+        self.assertEqual(reg.parent, self.user)
+        self.assertEqual(reg.child, self.child)
+        self.assertEqual(reg.parent_name, 'Sarah Wilson')
+        self.assertEqual(reg.parent_email, 'sarah@example.com')
+
+    def test_register_with_invalid_child_id(self):
+        other_user = User.objects.create_user(
+            username='other@example.com', email='other@example.com', password='pass',
+        )
+        other_child = Child.objects.create(parent=other_user, name='Other Child')
+        response = self.client.post('/api/registrations/', {
+            'trip': str(self.trip.id),
+            'child_id': str(other_child.id),
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_anonymous_registration_still_works(self):
+        self.client.credentials()
+        response = self.client.post('/api/registrations/', {
+            'trip': str(self.trip.id),
+            'student_name': 'Manual Child',
+            'parent_name': 'Manual Parent',
+            'parent_email': 'manual@example.com',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['student_name'], 'Manual Child')
+        reg = Registration.objects.get(id=response.data['id'])
+        self.assertIsNone(reg.parent)
+        self.assertIsNone(reg.child)
+
+
+class DashboardViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='sarah@example.com',
+            email='sarah@example.com',
+            password='SecurePass123!',
+            first_name='Sarah',
+            last_name='Wilson',
+        )
+        self.token = Token.objects.create(user=self.user)
+        self.trip = make_trip()
+        self.child = Child.objects.create(parent=self.user, name='Emma Wilson')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+    def test_dashboard_returns_own_registrations(self):
+        reg = Registration.objects.create(
+            trip=self.trip, parent=self.user, child=self.child,
+            student_name='Emma Wilson', parent_name='Sarah Wilson',
+            parent_email='sarah@example.com', status='confirmed',
+        )
+        Transaction.objects.create(
+            registration=reg, amount=self.trip.cost,
+            status='success', transaction_ref='TX-123',
+            card_last_four='1111',
+        )
+
+        response = self.client.get('/api/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['student_name'], 'Emma Wilson')
+        self.assertEqual(response.data[0]['child_name'], 'Emma Wilson')
+        self.assertEqual(response.data[0]['status'], 'confirmed')
+        self.assertEqual(response.data[0]['payment_status'], 'success')
+        self.assertEqual(response.data[0]['trip']['title'], 'Museum Visit')
+
+    def test_dashboard_excludes_other_users(self):
+        other_user = User.objects.create_user(
+            username='other@example.com', email='other@example.com', password='pass',
+        )
+        Registration.objects.create(
+            trip=self.trip, parent=other_user,
+            student_name='Other Child', parent_name='Other Parent',
+            parent_email='other@example.com',
+        )
+
+        response = self.client.get('/api/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+    def test_dashboard_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.get('/api/dashboard/')
+        self.assertEqual(response.status_code, 401)
+
+    def test_dashboard_no_registrations(self):
+        response = self.client.get('/api/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
