@@ -24,6 +24,12 @@ export default function Header() {
               >
                 Dashboard
               </Link>
+              <Link
+                to="/trips"
+                className="text-sm font-medium text-white/90 transition hover:text-white"
+              >
+                Trips
+              </Link>
               <span className="text-sm text-white/70">{user?.first_name}</span>
               <button
                 onClick={logout}
