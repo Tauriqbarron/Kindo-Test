@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import type { Trip } from '../../types';
+import type { Trip, Child } from '../../types';
 import type { WizardAction } from './wizardReducer';
-import { createRegistration } from '../../api/client';
+import { createRegistration, fetchChildren } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 interface Props {
   trip: Trip;
@@ -17,8 +18,12 @@ interface FormValues {
 }
 
 export default function RegistrationStep({ trip, dispatch }: Props) {
+  const { isAuthenticated, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [loadingChildren, setLoadingChildren] = useState(false);
 
   const {
     register,
@@ -26,7 +31,37 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
     formState: { errors },
   } = useForm<FormValues>();
 
-  const onSubmit = async (values: FormValues) => {
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLoadingChildren(true);
+      fetchChildren()
+        .then((data) => {
+          setChildren(data);
+          if (data.length > 0) setSelectedChildId(data[0].id);
+        })
+        .catch(() => {})
+        .finally(() => setLoadingChildren(false));
+    }
+  }, [isAuthenticated]);
+
+  const onSubmitAuthenticated = async () => {
+    if (!selectedChildId) return;
+    setSubmitting(true);
+    setServerError(null);
+    try {
+      const registration = await createRegistration({
+        trip: trip.id,
+        child_id: selectedChildId,
+      });
+      dispatch({ type: 'REGISTER_SUCCESS', payload: registration });
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onSubmitAnonymous = async (values: FormValues) => {
     setSubmitting(true);
     setServerError(null);
     try {
@@ -65,65 +100,122 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-kindo-gray-700">Student Name</label>
-          <input
-            {...register('student_name', { required: 'Student name is required', minLength: { value: 2, message: 'Must be at least 2 characters' } })}
-            className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
-            placeholder="e.g. Emma Wilson"
-          />
-          {errors.student_name && <p className="mt-1 text-xs text-kindo-red">{errors.student_name.message}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-kindo-gray-700">Parent / Guardian Name</label>
-          <input
-            {...register('parent_name', { required: 'Parent name is required', minLength: { value: 2, message: 'Must be at least 2 characters' } })}
-            className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
-            placeholder="e.g. Sarah Wilson"
-          />
-          {errors.parent_name && <p className="mt-1 text-xs text-kindo-red">{errors.parent_name.message}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-kindo-gray-700">Email</label>
-          <input
-            type="email"
-            {...register('parent_email', {
-              required: 'Email is required',
-              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email address' },
-            })}
-            className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
-            placeholder="sarah@example.com"
-          />
-          {errors.parent_email && <p className="mt-1 text-xs text-kindo-red">{errors.parent_email.message}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-kindo-gray-700">Phone (optional)</label>
-          <input
-            {...register('parent_phone')}
-            className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
-            placeholder="021-555-0123"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-lg bg-kindo-purple py-2.5 text-sm font-medium text-white transition hover:bg-kindo-purple-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submitting ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Registering...
-            </span>
+      {isAuthenticated ? (
+        <div className="space-y-4">
+          {loadingChildren ? (
+            <div className="flex items-center justify-center py-4">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-kindo-purple border-t-transparent" />
+            </div>
+          ) : children.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-kindo-gray-300 p-4 text-center text-sm text-kindo-gray-500">
+              No children added to your account. Please add a child from your{' '}
+              <a href="/dashboard" className="font-medium text-kindo-purple hover:underline">dashboard</a>{' '}
+              first.
+            </div>
           ) : (
-            'Continue to Payment'
+            <>
+              <div>
+                <label className="block text-sm font-medium text-kindo-gray-700">Select Child</label>
+                <select
+                  value={selectedChildId}
+                  onChange={(e) => setSelectedChildId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
+                >
+                  {children.map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}{child.grade ? ` (${child.grade})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rounded-lg border border-kindo-gray-200 bg-kindo-gray-50 p-3">
+                <p className="text-sm text-kindo-gray-600">
+                  <span className="font-medium">Parent:</span> {user?.first_name} {user?.last_name}
+                </p>
+                <p className="text-sm text-kindo-gray-600">
+                  <span className="font-medium">Email:</span> {user?.email}
+                </p>
+              </div>
+
+              <button
+                onClick={onSubmitAuthenticated}
+                disabled={submitting || !selectedChildId}
+                className="w-full rounded-lg bg-kindo-purple py-2.5 text-sm font-medium text-white transition hover:bg-kindo-purple-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Registering...
+                  </span>
+                ) : (
+                  'Continue to Payment'
+                )}
+              </button>
+            </>
           )}
-        </button>
-      </form>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmitAnonymous)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-kindo-gray-700">Student Name</label>
+            <input
+              {...register('student_name', { required: 'Student name is required', minLength: { value: 2, message: 'Must be at least 2 characters' } })}
+              className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
+              placeholder="e.g. Emma Wilson"
+            />
+            {errors.student_name && <p className="mt-1 text-xs text-kindo-red">{errors.student_name.message}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-kindo-gray-700">Parent / Guardian Name</label>
+            <input
+              {...register('parent_name', { required: 'Parent name is required', minLength: { value: 2, message: 'Must be at least 2 characters' } })}
+              className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
+              placeholder="e.g. Sarah Wilson"
+            />
+            {errors.parent_name && <p className="mt-1 text-xs text-kindo-red">{errors.parent_name.message}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-kindo-gray-700">Email</label>
+            <input
+              type="email"
+              {...register('parent_email', {
+                required: 'Email is required',
+                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email address' },
+              })}
+              className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
+              placeholder="sarah@example.com"
+            />
+            {errors.parent_email && <p className="mt-1 text-xs text-kindo-red">{errors.parent_email.message}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-kindo-gray-700">Phone (optional)</label>
+            <input
+              {...register('parent_phone')}
+              className="mt-1 w-full rounded-lg border border-kindo-gray-300 px-3 py-2 text-sm focus:border-kindo-purple focus:outline-none focus:ring-1 focus:ring-kindo-purple"
+              placeholder="021-555-0123"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full rounded-lg bg-kindo-purple py-2.5 text-sm font-medium text-white transition hover:bg-kindo-purple-dark disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Registering...
+              </span>
+            ) : (
+              'Continue to Payment'
+            )}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
