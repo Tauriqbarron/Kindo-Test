@@ -8,12 +8,30 @@ from .models import Registration, Transaction, Trip
 class TripSerializer(serializers.ModelSerializer):
     spots_remaining = serializers.IntegerField(read_only=True)
     is_full = serializers.BooleanField(read_only=True)
+    registered_children = serializers.SerializerMethodField()
 
     class Meta:
         model = Trip
         fields = [
             'id', 'title', 'description', 'destination', 'date', 'cost',
             'school_id', 'activity_id', 'capacity', 'spots_remaining', 'is_full',
+            'registered_children',
+        ]
+
+    def get_registered_children(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return []
+        registrations = obj.registrations.filter(
+            parent=request.user,
+            status__in=['pending', 'confirmed'],
+        ).select_related('child')
+        return [
+            {
+                'name': reg.child.name if reg.child else reg.student_name,
+                'status': reg.status,
+            }
+            for reg in registrations
         ]
 
 

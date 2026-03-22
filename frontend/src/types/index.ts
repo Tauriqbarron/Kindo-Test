@@ -1,3 +1,8 @@
+export interface RegisteredChild {
+  name: string;
+  status: 'pending' | 'confirmed';
+}
+
 export interface Trip {
   id: string;
   title: string;
@@ -10,6 +15,7 @@ export interface Trip {
   capacity: number;
   spots_remaining: number;
   is_full: boolean;
+  registered_children: RegisteredChild[];
 }
 
 export interface Registration {

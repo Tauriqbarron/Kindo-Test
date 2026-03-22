@@ -85,6 +85,28 @@ export default function TripDetailsStep({ dispatch }: Props) {
               </button>
             </div>
           </div>
+          {trip.registered_children.length > 0 && (
+            <div className="mt-3 border-t border-kindo-gray-200 pt-3">
+              <p className="text-xs font-medium text-kindo-gray-500 mb-1.5">Registered:</p>
+              <div className="flex flex-wrap gap-2">
+                {trip.registered_children.map((child) => (
+                  <span
+                    key={child.name}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      child.status === 'confirmed'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {child.name}
+                    <span className="text-[10px]">
+                      {child.status === 'confirmed' ? '✓' : '⏳'}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>
