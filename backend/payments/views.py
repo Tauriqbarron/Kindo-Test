@@ -1,11 +1,13 @@
 import logging
 
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Registration, Trip
 from .serializers import (
+    DashboardRegistrationSerializer,
     PaymentRequestSerializer,
     RegistrationDetailSerializer,
     RegistrationSerializer,
@@ -29,6 +31,16 @@ class TripDetailView(generics.RetrieveAPIView):
 
 class RegistrationCreateView(generics.CreateAPIView):
     serializer_class = RegistrationSerializer
+
+
+class DashboardView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DashboardRegistrationSerializer
+
+    def get_queryset(self):
+        return Registration.objects.filter(
+            parent=self.request.user,
+        ).select_related('trip', 'child', 'transaction')
 
 
 class RegistrationDetailView(generics.RetrieveAPIView):
