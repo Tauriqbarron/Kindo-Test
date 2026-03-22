@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { PaymentResult, Trip } from '../../types';
 import type { WizardAction } from './wizardReducer';
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function ConfirmationStep({ trip, paymentResult, dispatch }: Props) {
+  const navigate = useNavigate();
   const { transaction, registration } = paymentResult;
 
   return (
@@ -59,12 +61,20 @@ export default function ConfirmationStep({ trip, paymentResult, dispatch }: Prop
         </dl>
       </div>
 
-      <button
-        onClick={() => dispatch({ type: 'RESET' })}
-        className="mt-6 rounded-lg bg-kindo-purple px-6 py-2.5 text-sm font-medium text-white transition hover:bg-kindo-purple-dark"
-      >
-        Register Another Child
-      </button>
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <button
+          onClick={() => navigate('/trips')}
+          className="rounded-lg border border-kindo-purple px-6 py-2.5 text-sm font-medium text-kindo-purple transition hover:bg-kindo-purple hover:text-white"
+        >
+          View Trips
+        </button>
+        <button
+          onClick={() => dispatch({ type: 'RESET' })}
+          className="rounded-lg bg-kindo-purple px-6 py-2.5 text-sm font-medium text-white transition hover:bg-kindo-purple-dark"
+        >
+          Register Another Child
+        </button>
+      </div>
     </div>
   );
 }
