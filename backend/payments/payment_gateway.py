@@ -19,3 +19,16 @@ class PaymentGateway(ABC):
             dict with keys: success, transaction_ref, error_message, amount_charged
         """
         ...
+
+    @abstractmethod
+    def refund(self, refund_data: dict) -> dict:
+        """
+        Process a refund.
+
+        Args:
+            refund_data: dict with transaction_ref, amount
+
+        Returns:
+            dict with keys: success, refund_ref, error_message
+        """
+        ...

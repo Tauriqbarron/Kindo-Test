@@ -1,6 +1,6 @@
 import type {
   Trip, Registration, PaymentResult, RegistrationFormData, PaymentFormData,
-  AuthResponse, User, Child, DashboardRegistration,
+  AuthResponse, User, Child, DashboardRegistration, WithdrawResult, CreditBalance,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -111,4 +111,23 @@ export function deleteChild(id: string): Promise<void> {
 // Dashboard
 export function fetchDashboard(): Promise<DashboardRegistration[]> {
   return request<DashboardRegistration[]>('/dashboard/');
+}
+
+// Withdrawals
+export function withdrawRegistration(id: string, resolution: 'credit' | 'refund'): Promise<WithdrawResult> {
+  return request<WithdrawResult>(`/registrations/${id}/withdraw/`, {
+    method: 'POST',
+    body: JSON.stringify({ resolution }),
+  });
+}
+
+export function cancelRegistration(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/registrations/${id}/cancel/`, {
+    method: 'POST',
+  });
+}
+
+// Credits
+export function fetchCreditBalance(): Promise<CreditBalance> {
+  return request<CreditBalance>('/credits/balance/');
 }

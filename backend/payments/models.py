@@ -1,8 +1,10 @@
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Sum
 
 
 class Trip(models.Model):
@@ -96,3 +98,61 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"TX {self.transaction_ref} - {self.status}"
+
+
+class Withdrawal(models.Model):
+    RESOLUTION_CHOICES = [
+        ('credit', 'Account Credit'),
+        ('refund', 'Refund to Card'),
+    ]
+    STATUS_CHOICES = [
+        ('completed', 'Completed'),
+        ('pending', 'Pending'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    registration = models.OneToOneField(
+        Registration, on_delete=models.CASCADE, related_name='withdrawal',
+    )
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    processed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Withdrawal {self.id} - {self.resolution} ({self.status})"
+
+
+class AccountCredit(models.Model):
+    REASON_CHOICES = [
+        ('withdrawal', 'Trip Withdrawal'),
+        ('payment', 'Payment Applied'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='credits',
+    )
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+    registration = models.ForeignKey(
+        Registration, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='credit_entries',
+    )
+    note = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Credit {self.amount} for {self.user} ({self.reason})"
+
+    @classmethod
+    def balance_for_user(cls, user):
+        result = cls.objects.filter(user=user).aggregate(total=Sum('amount'))
+        return result['total'] or Decimal('0.00')

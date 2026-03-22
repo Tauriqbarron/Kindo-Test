@@ -31,6 +31,13 @@ class FakePaymentGateway(PaymentGateway):
             'amount_charged': None,
         }
 
+    def refund(self, refund_data: dict) -> dict:
+        return {
+            'success': self._success,
+            'refund_ref': 'RF-FAKE-123',
+            'error_message': None if self._success else 'Refund declined by test gateway',
+        }
+
 
 def make_registration():
     trip = Trip.objects.create(

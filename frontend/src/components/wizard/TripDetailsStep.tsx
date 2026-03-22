@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Trip } from '../../types';
 import type { WizardAction } from './wizardReducer';
-import { fetchTrips } from '../../api/client';
+import { fetchTrips, withdrawRegistration, cancelRegistration } from '../../api/client';
 
 interface Props {
   dispatch: React.Dispatch<WizardAction>;
@@ -11,6 +11,8 @@ export default function TripDetailsStep({ dispatch }: Props) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [showWithdrawChoice, setShowWithdrawChoice] = useState<string | null>(null);
 
   const loadTrips = () => {
     setLoading(true);
@@ -91,7 +93,7 @@ export default function TripDetailsStep({ dispatch }: Props) {
               <div className="flex flex-wrap gap-2">
                 {trip.registered_children.map((child) => (
                   <span
-                    key={child.name}
+                    key={child.registration_id}
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       child.status === 'confirmed'
                         ? 'bg-green-100 text-green-700'
@@ -102,6 +104,75 @@ export default function TripDetailsStep({ dispatch }: Props) {
                     <span className="text-[10px]">
                       {child.status === 'confirmed' ? '✓' : '⏳'}
                     </span>
+                    {showWithdrawChoice === child.registration_id ? (
+                      <span className="ml-1 inline-flex gap-1">
+                        <button
+                          disabled={withdrawingId === child.registration_id}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setWithdrawingId(child.registration_id);
+                            try {
+                              await withdrawRegistration(child.registration_id, 'credit');
+                              loadTrips();
+                            } catch { /* handled silently */ }
+                            finally { setWithdrawingId(null); setShowWithdrawChoice(null); }
+                          }}
+                          className="rounded bg-green-600 px-1.5 py-0.5 text-[10px] text-white hover:bg-green-700"
+                          title="Keep as account credit"
+                        >
+                          Credit
+                        </button>
+                        <button
+                          disabled={withdrawingId === child.registration_id}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setWithdrawingId(child.registration_id);
+                            try {
+                              await withdrawRegistration(child.registration_id, 'refund');
+                              loadTrips();
+                            } catch { /* handled silently */ }
+                            finally { setWithdrawingId(null); setShowWithdrawChoice(null); }
+                          }}
+                          className="rounded bg-blue-600 px-1.5 py-0.5 text-[10px] text-white hover:bg-blue-700"
+                          title="Refund to card"
+                        >
+                          Refund
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowWithdrawChoice(null); }}
+                          className="rounded bg-gray-400 px-1.5 py-0.5 text-[10px] text-white hover:bg-gray-500"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ) : (
+                      child.status === 'confirmed' ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowWithdrawChoice(child.registration_id); }}
+                          className="ml-1 text-[10px] text-red-500 hover:text-red-700"
+                          title="Withdraw"
+                        >
+                          ✕
+                        </button>
+                      ) : (
+                        <button
+                          disabled={withdrawingId === child.registration_id}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setWithdrawingId(child.registration_id);
+                            try {
+                              await cancelRegistration(child.registration_id);
+                              loadTrips();
+                            } catch { /* handled silently */ }
+                            finally { setWithdrawingId(null); }
+                          }}
+                          className="ml-1 text-[10px] text-red-500 hover:text-red-700"
+                          title="Cancel registration"
+                        >
+                          ✕
+                        </button>
+                      )
+                    )}
                   </span>
                 ))}
               </div>

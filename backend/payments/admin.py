@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Registration, Transaction, Trip
+from .models import AccountCredit, Registration, Transaction, Trip, Withdrawal
 
 
 @admin.register(Trip)
@@ -20,3 +20,16 @@ class RegistrationAdmin(admin.ModelAdmin):
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ('transaction_ref', 'registration', 'amount', 'status', 'processed_at')
     list_filter = ('status',)
+
+
+@admin.register(Withdrawal)
+class WithdrawalAdmin(admin.ModelAdmin):
+    list_display = ('registration', 'amount', 'resolution', 'status', 'created_at')
+    list_filter = ('resolution', 'status')
+
+
+@admin.register(AccountCredit)
+class AccountCreditAdmin(admin.ModelAdmin):
+    list_display = ('user', 'amount', 'reason', 'registration', 'created_at')
+    list_filter = ('reason',)
+    search_fields = ('user__email', 'user__first_name', 'user__last_name')

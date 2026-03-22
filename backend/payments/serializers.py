@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from accounts.models import Child
 from .card_details import CardDetails, CardValidationError
-from .models import Registration, Transaction, Trip
+from .models import AccountCredit, Registration, Transaction, Trip, Withdrawal
 
 
 class TripSerializer(serializers.ModelSerializer):
@@ -28,6 +28,7 @@ class TripSerializer(serializers.ModelSerializer):
         ).select_related('child')
         return [
             {
+                'registration_id': str(reg.id),
                 'name': reg.child.name if reg.child else reg.student_name,
                 'status': reg.status,
             }
@@ -118,12 +119,16 @@ class DashboardRegistrationSerializer(serializers.ModelSerializer):
     trip = DashboardTripSerializer(read_only=True)
     child_name = serializers.SerializerMethodField()
     payment_status = serializers.SerializerMethodField()
+    can_withdraw = serializers.SerializerMethodField()
+    can_cancel = serializers.SerializerMethodField()
+    withdrawal_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Registration
         fields = [
             'id', 'trip', 'student_name', 'child_name', 'status',
-            'payment_status', 'created_at',
+            'payment_status', 'created_at', 'can_withdraw', 'can_cancel',
+            'withdrawal_status',
         ]
 
     def get_child_name(self, obj):
@@ -137,24 +142,27 @@ class DashboardRegistrationSerializer(serializers.ModelSerializer):
             return transaction.status
         return None
 
+    def get_can_withdraw(self, obj):
+        return obj.status == 'confirmed' and not hasattr(obj, 'withdrawal')
+
+    def get_can_cancel(self, obj):
+        return obj.status == 'pending'
+
+    def get_withdrawal_status(self, obj):
+        withdrawal = getattr(obj, 'withdrawal', None)
+        if withdrawal:
+            return withdrawal.status
+        return None
+
 
 class PaymentRequestSerializer(serializers.Serializer):
     registration_id = serializers.UUIDField()
-    card_number = serializers.CharField(max_length=19)
-    expiry_date = serializers.CharField(max_length=5)
-    cvv = serializers.CharField(max_length=4)
+    card_number = serializers.CharField(max_length=19, required=False, default='')
+    expiry_date = serializers.CharField(max_length=5, required=False, default='')
+    cvv = serializers.CharField(max_length=4, required=False, default='')
+    use_credit = serializers.BooleanField(default=False, required=False)
 
     def validate(self, data):
-        try:
-            card = CardDetails(
-                card_number=data['card_number'],
-                expiry_date=data['expiry_date'],
-                cvv=data['cvv'],
-            )
-            data['card_details'] = card
-        except CardValidationError as e:
-            raise serializers.ValidationError({'card': e.message})
-
         try:
             registration = Registration.objects.select_related('trip').get(
                 id=data['registration_id'],
@@ -170,4 +178,51 @@ class PaymentRequestSerializer(serializers.Serializer):
             )
 
         data['registration'] = registration
+
+        # Check if credit covers the full amount
+        credit_covers_full = False
+        if data.get('use_credit'):
+            request = self.context.get('request')
+            if request and request.user.is_authenticated:
+                from .models import AccountCredit
+                balance = AccountCredit.balance_for_user(request.user)
+                credit_covers_full = balance >= registration.trip.cost
+
+        # Only validate card if credit doesn't cover the full amount
+        if not credit_covers_full:
+            if not data.get('card_number') or not data.get('expiry_date') or not data.get('cvv'):
+                raise serializers.ValidationError(
+                    {'card': 'Card details are required when credit does not cover the full amount.'},
+                )
+            try:
+                card = CardDetails(
+                    card_number=data['card_number'],
+                    expiry_date=data['expiry_date'],
+                    cvv=data['cvv'],
+                )
+                data['card_details'] = card
+            except CardValidationError as e:
+                raise serializers.ValidationError({'card': e.message})
+        else:
+            data['card_details'] = None
+
         return data
+
+
+class WithdrawRequestSerializer(serializers.Serializer):
+    resolution = serializers.ChoiceField(choices=['credit', 'refund'])
+
+
+class WithdrawalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Withdrawal
+        fields = [
+            'id', 'registration', 'amount', 'resolution', 'status',
+            'processed_at', 'created_at',
+        ]
+
+
+class AccountCreditSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountCredit
+        fields = ['id', 'amount', 'reason', 'registration', 'note', 'created_at']

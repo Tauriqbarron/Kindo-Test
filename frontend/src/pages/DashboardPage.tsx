@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ChildManager from '../components/ChildManager';
+import WithdrawModal from '../components/WithdrawModal';
 import type { Child, DashboardRegistration } from '../types';
 import * as api from '../api/client';
 
@@ -27,6 +28,13 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
       </span>
     );
   }
+  if (status === 'cancelled') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+        Cancelled
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
       {status}
@@ -39,21 +47,38 @@ export default function DashboardPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [registrations, setRegistrations] = useState<DashboardRegistration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creditBalance, setCreditBalance] = useState('0.00');
+  const [withdrawingReg, setWithdrawingReg] = useState<DashboardRegistration | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [childrenData, regData] = await Promise.all([
+      const [childrenData, regData, creditData] = await Promise.all([
         api.fetchChildren(),
         api.fetchDashboard(),
+        api.fetchCreditBalance(),
       ]);
       setChildren(childrenData);
       setRegistrations(regData);
+      setCreditBalance(creditData.balance);
     } catch {
       // Error handled silently
     } finally {
       setLoading(false);
     }
   }, []);
+
+  async function handleCancel(regId: string) {
+    setCancellingId(regId);
+    try {
+      await api.cancelRegistration(regId);
+      await loadData();
+    } catch {
+      // Error handled silently
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   useEffect(() => {
     loadData();
@@ -70,9 +95,16 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-kindo-gray-800">
-          Welcome, {user?.first_name}
-        </h2>
+        <div>
+          <h2 className="text-xl font-semibold text-kindo-gray-800">
+            Welcome, {user?.first_name}
+          </h2>
+          {parseFloat(creditBalance) > 0 && (
+            <p className="mt-1 text-sm text-kindo-gray-600">
+              Account Credit: <span className="font-semibold text-kindo-green">${creditBalance}</span>
+            </p>
+          )}
+        </div>
         <Link
           to="/trips"
           className="rounded-lg bg-kindo-purple px-4 py-2 text-sm font-medium text-white transition hover:bg-kindo-purple-dark"
@@ -109,11 +141,44 @@ export default function DashboardPage() {
                   </div>
                   <StatusBadge status={reg.status} paymentStatus={reg.payment_status} />
                 </div>
+                {(reg.can_withdraw || reg.can_cancel) && (
+                  <div className="mt-3 flex justify-end gap-2 border-t border-kindo-gray-100 pt-3">
+                    {reg.can_withdraw && (
+                      <button
+                        onClick={() => setWithdrawingReg(reg)}
+                        className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                      >
+                        Withdraw
+                      </button>
+                    )}
+                    {reg.can_cancel && (
+                      <button
+                        onClick={() => handleCancel(reg.id)}
+                        disabled={cancellingId === reg.id}
+                        className="rounded-lg border border-kindo-gray-300 px-3 py-1.5 text-xs font-medium text-kindo-gray-600 transition hover:bg-kindo-gray-50 disabled:opacity-50"
+                      >
+                        {cancellingId === reg.id ? 'Cancelling...' : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {withdrawingReg && (
+        <WithdrawModal
+          registration={withdrawingReg}
+          onClose={() => setWithdrawingReg(null)}
+          onSuccess={(balance) => {
+            setCreditBalance(balance);
+            setWithdrawingReg(null);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }

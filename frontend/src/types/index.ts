@@ -1,4 +1,5 @@
 export interface RegisteredChild {
+  registration_id: string;
   name: string;
   status: 'pending' | 'confirmed';
 }
@@ -75,6 +76,30 @@ export interface DashboardRegistration {
   status: 'pending' | 'confirmed' | 'failed' | 'cancelled';
   payment_status: 'success' | 'failed' | 'pending' | null;
   created_at: string;
+  can_withdraw: boolean;
+  can_cancel: boolean;
+  withdrawal_status: 'completed' | 'pending' | 'failed' | null;
+}
+
+export interface Withdrawal {
+  id: string;
+  registration: string;
+  amount: string;
+  resolution: 'credit' | 'refund';
+  status: 'completed' | 'pending' | 'failed';
+  processed_at: string | null;
+  created_at: string;
+}
+
+export interface WithdrawResult {
+  success: boolean;
+  withdrawal?: Withdrawal;
+  credit_balance?: string;
+  error?: string;
+}
+
+export interface CreditBalance {
+  balance: string;
 }
 
 export interface RegistrationFormData {
@@ -88,7 +113,8 @@ export interface RegistrationFormData {
 
 export interface PaymentFormData {
   registration_id: string;
-  card_number: string;
-  expiry_date: string;
-  cvv: string;
+  card_number?: string;
+  expiry_date?: string;
+  cvv?: string;
+  use_credit?: boolean;
 }
