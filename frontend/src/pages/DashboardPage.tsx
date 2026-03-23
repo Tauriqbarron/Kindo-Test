@@ -99,6 +99,8 @@ export default function DashboardPage() {
     );
   }
 
+  const activeRegistrations = registrations.filter((r) => r.status !== 'cancelled');
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
@@ -111,10 +113,10 @@ export default function DashboardPage() {
               Account Credit: <span className="font-semibold text-kindo-green">${creditBalance}</span>
             </p>
           )}
-          {registrations.filter((r) => r.amount_owing).reduce((sum, r) => sum + parseFloat(r.amount_owing!), 0) > 0 && (
+          {activeRegistrations.filter((r) => r.amount_owing).reduce((sum, r) => sum + parseFloat(r.amount_owing!), 0) > 0 && (
             <p className="mt-1 text-sm text-amber-600">
               Payments owing: <span className="font-semibold">
-                ${registrations.filter((r) => r.amount_owing).reduce((sum, r) => sum + parseFloat(r.amount_owing!), 0).toFixed(2)}
+                ${activeRegistrations.filter((r) => r.amount_owing).reduce((sum, r) => sum + parseFloat(r.amount_owing!), 0).toFixed(2)}
               </span>
             </p>
           )}
@@ -133,14 +135,14 @@ export default function DashboardPage() {
 
       <div>
         <h3 className="mb-3 text-base font-semibold text-kindo-gray-800">Trip Registrations</h3>
-        {registrations.length === 0 ? (
+        {activeRegistrations.length === 0 ? (
           <p className="rounded-lg border border-dashed border-kindo-gray-300 p-4 text-center text-sm text-kindo-gray-500">
             No trip registrations yet.{' '}
             <Link to="/trips" className="font-medium text-kindo-purple hover:underline">Browse trips</Link>
           </p>
         ) : (
           <ul className="space-y-3">
-            {registrations.map((reg) => (
+            {activeRegistrations.map((reg) => (
               <li key={reg.id} className="rounded-lg border border-kindo-gray-200 bg-white p-4">
                 <div className="flex items-start justify-between">
                   <div>
