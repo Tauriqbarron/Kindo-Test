@@ -22,6 +22,7 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [children, setChildren] = useState<Child[]>([]);
+  const [allChildrenCount, setAllChildrenCount] = useState(0);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [loadingChildren, setLoadingChildren] = useState(false);
   const payLaterRef = useRef(false);
@@ -37,13 +38,18 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
       setLoadingChildren(true);
       fetchChildren()
         .then((data) => {
-          setChildren(data);
-          if (data.length > 0) setSelectedChildId(data[0].id);
+          const registeredChildIds = new Set(
+            trip.registered_children.map((rc) => rc.child_id).filter(Boolean)
+          );
+          const available = data.filter((c) => !registeredChildIds.has(c.id));
+          setAllChildrenCount(data.length);
+          setChildren(available);
+          if (available.length > 0) setSelectedChildId(available[0].id);
         })
         .catch(() => {})
         .finally(() => setLoadingChildren(false));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, trip.registered_children]);
 
   const onSubmitAuthenticated = async () => {
     if (!selectedChildId) return;
@@ -125,9 +131,13 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
             </div>
           ) : children.length === 0 ? (
             <div className="rounded-lg border border-dashed border-kindo-gray-300 p-4 text-center text-sm text-kindo-gray-500">
-              No children added to your account. Please add a child from your{' '}
-              <a href="/dashboard" className="font-medium text-kindo-purple hover:underline">dashboard</a>{' '}
-              first.
+              {allChildrenCount > 0
+                ? 'All your children are already registered for this trip.'
+                : (<>
+                    No children added to your account. Please add a child from your{' '}
+                    <a href="/dashboard" className="font-medium text-kindo-purple hover:underline">dashboard</a>{' '}
+                    first.
+                  </>)}
             </div>
           ) : (
             <>

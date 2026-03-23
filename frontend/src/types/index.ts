@@ -1,5 +1,6 @@
 export interface RegisteredChild {
   registration_id: string;
+  child_id: string | null;
   name: string;
   status: 'pending' | 'registered' | 'confirmed';
 }
