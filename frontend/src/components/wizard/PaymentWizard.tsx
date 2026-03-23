@@ -30,7 +30,7 @@ export default function PaymentWizard({ initialPayRegistrationId }: Props = {}) 
 
   return (
     <div>
-      <StepIndicator currentStep={state.step} />
+      {state.step !== 'trip' && <StepIndicator currentStep={state.step} />}
 
       {state.step === 'trip' && (
         <TripDetailsStep dispatch={dispatch} />
