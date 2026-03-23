@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { Trip, Child } from '../../types';
 import type { WizardAction } from './wizardReducer';
-import { createRegistration, fetchChildren } from '../../api/client';
+import { createRegistration, fetchChildren, registerOnly } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 interface Props {
@@ -24,6 +24,7 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [loadingChildren, setLoadingChildren] = useState(false);
+  const payLaterRef = useRef(false);
 
   const {
     register,
@@ -53,11 +54,19 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
         trip: trip.id,
         child_id: selectedChildId,
       });
-      dispatch({ type: 'REGISTER_SUCCESS', payload: registration });
+      if (payLaterRef.current) {
+        const result = await registerOnly(registration.id);
+        if (result.success && result.registration) {
+          dispatch({ type: 'REGISTER_ONLY_SUCCESS', payload: result.registration });
+        }
+      } else {
+        dispatch({ type: 'REGISTER_SUCCESS', payload: registration });
+      }
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setSubmitting(false);
+      payLaterRef.current = false;
     }
   };
 
@@ -66,11 +75,19 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
     setServerError(null);
     try {
       const registration = await createRegistration({ ...values, trip: trip.id });
-      dispatch({ type: 'REGISTER_SUCCESS', payload: registration });
+      if (payLaterRef.current) {
+        const result = await registerOnly(registration.id);
+        if (result.success && result.registration) {
+          dispatch({ type: 'REGISTER_ONLY_SUCCESS', payload: result.registration });
+        }
+      } else {
+        dispatch({ type: 'REGISTER_SUCCESS', payload: registration });
+      }
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setSubmitting(false);
+      payLaterRef.current = false;
     }
   };
 
@@ -152,6 +169,22 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
                   'Continue to Payment'
                 )}
               </button>
+
+              <button
+                onClick={() => {
+                  payLaterRef.current = true;
+                  onSubmitAuthenticated();
+                }}
+                disabled={submitting || !selectedChildId}
+                className="w-full rounded-lg border border-kindo-purple py-2.5 text-sm font-medium text-kindo-purple transition hover:bg-kindo-purple hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Register Now, Pay Later
+              </button>
+              {trip.payment_due_date && (
+                <p className="mt-1 text-center text-xs text-kindo-gray-400">
+                  Payment due by {new Date(trip.payment_due_date).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -214,6 +247,23 @@ export default function RegistrationStep({ trip, dispatch }: Props) {
               'Continue to Payment'
             )}
           </button>
+
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => {
+              payLaterRef.current = true;
+              handleSubmit(onSubmitAnonymous)();
+            }}
+            className="w-full rounded-lg border border-kindo-purple py-2.5 text-sm font-medium text-kindo-purple transition hover:bg-kindo-purple hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Register Now, Pay Later
+          </button>
+          {trip.payment_due_date && (
+            <p className="mt-1 text-center text-xs text-kindo-gray-400">
+              Payment due by {new Date(trip.payment_due_date).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}
+            </p>
+          )}
         </form>
       )}
     </div>
