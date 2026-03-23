@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from decimal import Decimal
 
 from django.conf import settings
@@ -21,6 +22,8 @@ class Trip(models.Model):
     school_id = models.CharField(max_length=50)
     activity_id = models.CharField(max_length=50)
     capacity = models.PositiveIntegerField(default=30)
+    registration_close_date = models.DateField(null=True, blank=True)
+    payment_due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -31,10 +34,17 @@ class Trip(models.Model):
         return self.title
 
     @property
+    def registration_open(self):
+        if self.registration_close_date is None:
+            return True
+        return date.today() <= self.registration_close_date
+
+    @property
     def spots_remaining(self):
-        confirmed = self.registrations.filter(status='confirmed').count()
-        pending = self.registrations.filter(status='pending').count()
-        return self.capacity - confirmed - pending
+        active = self.registrations.filter(
+            status__in=['pending', 'registered', 'confirmed'],
+        ).count()
+        return self.capacity - active
 
     @property
     def is_full(self):
@@ -44,6 +54,7 @@ class Trip(models.Model):
 class Registration(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('registered', 'Registered'),
         ('confirmed', 'Confirmed'),
         ('failed', 'Failed'),
         ('cancelled', 'Cancelled'),

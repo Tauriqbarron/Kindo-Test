@@ -1,6 +1,7 @@
 import type {
   Trip, Registration, PaymentResult, RegistrationFormData, PaymentFormData,
   AuthResponse, User, Child, DashboardRegistration, WithdrawResult, CreditBalance,
+  RegisterOnlyResult,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -52,6 +53,12 @@ export function createRegistration(data: RegistrationFormData): Promise<Registra
 
 export function fetchRegistration(id: string): Promise<Registration> {
   return request<Registration>(`/registrations/${id}/`);
+}
+
+export function registerOnly(registrationId: string): Promise<RegisterOnlyResult> {
+  return request<RegisterOnlyResult>(`/registrations/${registrationId}/register-only/`, {
+    method: 'POST',
+  });
 }
 
 // Payments

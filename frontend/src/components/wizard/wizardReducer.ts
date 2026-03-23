@@ -1,6 +1,6 @@
 import type { Trip, Registration, PaymentResult } from '../../types';
 
-export type WizardStep = 'trip' | 'registration' | 'payment' | 'confirmation';
+export type WizardStep = 'trip' | 'registration' | 'payment' | 'confirmation' | 'registered_confirmation';
 
 export type WizardState = {
   step: WizardStep;
@@ -15,6 +15,8 @@ export type WizardAction =
   | { type: 'REGISTER_SUCCESS'; payload: Registration }
   | { type: 'PAYMENT_SUCCESS'; payload: PaymentResult }
   | { type: 'PAYMENT_FAILURE'; payload: string }
+  | { type: 'REGISTER_ONLY_SUCCESS'; payload: Registration }
+  | { type: 'INIT_PAYMENT'; payload: { trip: Trip; registration: Registration } }
   | { type: 'GO_BACK' }
   | { type: 'RESET' }
   | { type: 'CLEAR_ERROR' };
@@ -61,8 +63,26 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         error: action.payload,
       };
 
+    case 'REGISTER_ONLY_SUCCESS':
+      return {
+        ...state,
+        step: 'registered_confirmation',
+        registration: action.payload,
+        error: null,
+      };
+
+    case 'INIT_PAYMENT':
+      return {
+        ...state,
+        step: 'payment',
+        selectedTrip: action.payload.trip,
+        registration: action.payload.registration,
+        error: null,
+      };
+
     case 'GO_BACK': {
-      const currentIndex = stepOrder.indexOf(state.step);
+      const current = state.step === 'registered_confirmation' ? 'confirmation' : state.step;
+      const currentIndex = stepOrder.indexOf(current);
       if (currentIndex <= 0) return state;
       return {
         ...state,

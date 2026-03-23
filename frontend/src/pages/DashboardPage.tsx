@@ -14,6 +14,13 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
       </span>
     );
   }
+  if (status === 'registered') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+        Payment Owing
+      </span>
+    );
+  }
   if (status === 'pending') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">
@@ -104,6 +111,13 @@ export default function DashboardPage() {
               Account Credit: <span className="font-semibold text-kindo-green">${creditBalance}</span>
             </p>
           )}
+          {registrations.filter((r) => r.amount_owing).reduce((sum, r) => sum + parseFloat(r.amount_owing!), 0) > 0 && (
+            <p className="mt-1 text-sm text-amber-600">
+              Payments owing: <span className="font-semibold">
+                ${registrations.filter((r) => r.amount_owing).reduce((sum, r) => sum + parseFloat(r.amount_owing!), 0).toFixed(2)}
+              </span>
+            </p>
+          )}
         </div>
         <Link
           to="/trips"
@@ -138,11 +152,29 @@ export default function DashboardPage() {
                     <p className="mt-1 text-sm text-kindo-gray-600">
                       Student: {reg.child_name} &middot; ${reg.trip.cost}
                     </p>
+                    {reg.amount_owing && (
+                      <p className="mt-1 text-sm font-medium text-amber-600">
+                        Payment owing: ${reg.amount_owing}
+                        {reg.trip.payment_due_date && (
+                          <span className="font-normal text-kindo-gray-500">
+                            {' '}(due {new Date(reg.trip.payment_due_date).toLocaleDateString('en-NZ', { dateStyle: 'medium' })})
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <StatusBadge status={reg.status} paymentStatus={reg.payment_status} />
                 </div>
-                {(reg.can_withdraw || reg.can_cancel) && (
+                {(reg.can_withdraw || reg.can_cancel || reg.can_pay) && (
                   <div className="mt-3 flex justify-end gap-2 border-t border-kindo-gray-100 pt-3">
+                    {reg.can_pay && (
+                      <Link
+                        to={`/trips?pay=${reg.id}`}
+                        className="rounded-lg bg-kindo-purple px-3 py-1.5 text-xs font-medium text-white transition hover:bg-kindo-purple-dark"
+                      >
+                        Pay Now
+                      </Link>
+                    )}
                     {reg.can_withdraw && (
                       <button
                         onClick={() => setWithdrawingReg(reg)}

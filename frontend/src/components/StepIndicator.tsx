@@ -7,7 +7,10 @@ const steps: { key: WizardStep; label: string }[] = [
   { key: 'confirmation', label: 'Confirm' },
 ];
 
-const stepIndex = (step: WizardStep) => steps.findIndex((s) => s.key === step);
+const stepIndex = (step: WizardStep) => {
+  if (step === 'registered_confirmation') return steps.length - 1;
+  return steps.findIndex((s) => s.key === step);
+};
 
 export default function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
   const current = stepIndex(currentStep);

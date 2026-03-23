@@ -3,6 +3,21 @@ import type { Trip } from '../../types';
 import type { WizardAction } from './wizardReducer';
 import { fetchTrips, withdrawRegistration, cancelRegistration } from '../../api/client';
 
+function relativeTimeLabel(dateStr: string): string {
+  const target = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diffMs = target.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Closed';
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays <= 14) return `${diffDays} days left`;
+  const weeks = Math.ceil(diffDays / 7);
+  return `${weeks} weeks`;
+}
+
 interface Props {
   dispatch: React.Dispatch<WizardAction>;
 }
@@ -71,19 +86,35 @@ export default function TripDetailsStep({ dispatch }: Props) {
                 <span>📅 {new Date(trip.date).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}</span>
                 <span>🎒 {trip.spots_remaining} / {trip.capacity} spots</span>
               </div>
+              {(trip.registration_close_date || trip.payment_due_date) && (
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  {trip.registration_close_date && (
+                    <span className={!trip.registration_open ? 'font-medium text-red-500' : 'text-kindo-gray-500'}>
+                      Registration closes: {new Date(trip.registration_close_date).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}
+                      {' '}({relativeTimeLabel(trip.registration_close_date)})
+                    </span>
+                  )}
+                  {trip.payment_due_date && (
+                    <span className="text-kindo-gray-500">
+                      Payment due: {new Date(trip.payment_due_date).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}
+                      {' '}({relativeTimeLabel(trip.payment_due_date)})
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex flex-col items-end gap-2">
               <span className="text-lg font-bold text-kindo-purple">${trip.cost}</span>
               <button
-                disabled={trip.is_full}
+                disabled={trip.is_full || !trip.registration_open}
                 onClick={() => dispatch({ type: 'SELECT_TRIP', payload: trip })}
                 className={`rounded-lg px-5 py-2 text-sm font-medium text-white transition ${
-                  trip.is_full
+                  trip.is_full || !trip.registration_open
                     ? 'cursor-not-allowed bg-kindo-gray-300'
                     : 'bg-kindo-purple hover:bg-kindo-purple-dark'
                 }`}
               >
-                {trip.is_full ? 'Full' : 'Register'}
+                {trip.is_full ? 'Full' : !trip.registration_open ? 'Closed' : 'Register'}
               </button>
             </div>
           </div>
@@ -97,12 +128,14 @@ export default function TripDetailsStep({ dispatch }: Props) {
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       child.status === 'confirmed'
                         ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
+                        : child.status === 'registered'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-amber-100 text-amber-700'
                     }`}
                   >
                     {child.name}
                     <span className="text-[10px]">
-                      {child.status === 'confirmed' ? '✓' : '⏳'}
+                      {child.status === 'confirmed' ? '✓' : child.status === 'registered' ? '📋' : '⏳'}
                     </span>
                     {showWithdrawChoice === child.registration_id ? (
                       <span className="ml-1 inline-flex gap-1">

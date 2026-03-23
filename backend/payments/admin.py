@@ -5,7 +5,7 @@ from .models import AccountCredit, Registration, Transaction, Trip, Withdrawal
 
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
-    list_display = ('title', 'destination', 'date', 'cost', 'capacity', 'spots_remaining')
+    list_display = ('title', 'destination', 'date', 'cost', 'capacity', 'spots_remaining', 'registration_close_date', 'payment_due_date')
     search_fields = ('title', 'destination')
 
 

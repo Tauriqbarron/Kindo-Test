@@ -6,11 +6,13 @@
             "title": "Wellington Zoo Adventure",
             "description": "An exciting day trip to Wellington Zoo! Students will explore native wildlife exhibits, participate in a behind-the-scenes tour, and learn about conservation efforts for endangered species.",
             "destination": "Wellington Zoo, 200 Daniell Street, Newtown",
-            "date": "2026-05-15",
+            "date": "2026-04-15",
             "cost": "45.00",
             "school_id": "SCH001",
             "activity_id": "ACT001",
             "capacity": 30,
+            "registration_close_date": "2026-04-01",
+            "payment_due_date": "2026-04-10",
             "created_at": "2026-03-01T00:00:00Z",
             "updated_at": "2026-03-01T00:00:00Z"
         }
@@ -22,11 +24,13 @@
             "title": "Te Papa Museum Visit",
             "description": "Discover New Zealand's art, history, and natural environment at Te Papa Tongarewa. Students will engage with interactive exhibits and participate in a guided educational workshop.",
             "destination": "Te Papa, 55 Cable Street, Wellington",
-            "date": "2026-06-10",
+            "date": "2026-04-28",
             "cost": "25.00",
             "school_id": "SCH001",
             "activity_id": "ACT002",
             "capacity": 35,
+            "registration_close_date": "2026-04-14",
+            "payment_due_date": "2026-04-21",
             "created_at": "2026-03-01T00:00:00Z",
             "updated_at": "2026-03-01T00:00:00Z"
         }
@@ -38,11 +42,13 @@
             "title": "Zealandia Ecosanctuary",
             "description": "A full-day experience at Zealandia, the world's first fully-fenced urban ecosanctuary. Students will hike through native bush, spot rare birds like takahē and kiwi, and learn about predator-free NZ.",
             "destination": "Zealandia, 53 Waiapu Road, Karori",
-            "date": "2026-07-22",
+            "date": "2026-05-10",
             "cost": "38.50",
             "school_id": "SCH002",
             "activity_id": "ACT003",
             "capacity": 25,
+            "registration_close_date": "2026-04-26",
+            "payment_due_date": "2026-05-03",
             "created_at": "2026-03-01T00:00:00Z",
             "updated_at": "2026-03-01T00:00:00Z"
         }

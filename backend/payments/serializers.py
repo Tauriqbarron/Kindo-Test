@@ -8,6 +8,7 @@ from .models import AccountCredit, Registration, Transaction, Trip, Withdrawal
 class TripSerializer(serializers.ModelSerializer):
     spots_remaining = serializers.IntegerField(read_only=True)
     is_full = serializers.BooleanField(read_only=True)
+    registration_open = serializers.BooleanField(read_only=True)
     registered_children = serializers.SerializerMethodField()
 
     class Meta:
@@ -15,7 +16,8 @@ class TripSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'destination', 'date', 'cost',
             'school_id', 'activity_id', 'capacity', 'spots_remaining', 'is_full',
-            'registered_children',
+            'registered_children', 'registration_close_date', 'payment_due_date',
+            'registration_open',
         ]
 
     def get_registered_children(self, obj):
@@ -24,7 +26,7 @@ class TripSerializer(serializers.ModelSerializer):
             return []
         registrations = obj.registrations.filter(
             parent=request.user,
-            status__in=['pending', 'confirmed'],
+            status__in=['pending', 'registered', 'confirmed'],
         ).select_related('child')
         return [
             {
@@ -58,6 +60,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def validate_trip(self, value):
         if value.is_full:
             raise serializers.ValidationError('This trip is full.')
+        if not value.registration_open:
+            raise serializers.ValidationError('Registration for this trip has closed.')
         return value
 
     def validate_child_id(self, value):
@@ -112,7 +116,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 class DashboardTripSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trip
-        fields = ['id', 'title', 'destination', 'date', 'cost']
+        fields = ['id', 'title', 'destination', 'date', 'cost', 'payment_due_date']
 
 
 class DashboardRegistrationSerializer(serializers.ModelSerializer):
@@ -121,6 +125,8 @@ class DashboardRegistrationSerializer(serializers.ModelSerializer):
     payment_status = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
     can_cancel = serializers.SerializerMethodField()
+    can_pay = serializers.SerializerMethodField()
+    amount_owing = serializers.SerializerMethodField()
     withdrawal_status = serializers.SerializerMethodField()
 
     class Meta:
@@ -128,7 +134,7 @@ class DashboardRegistrationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'trip', 'student_name', 'child_name', 'status',
             'payment_status', 'created_at', 'can_withdraw', 'can_cancel',
-            'withdrawal_status',
+            'can_pay', 'amount_owing', 'withdrawal_status',
         ]
 
     def get_child_name(self, obj):
@@ -137,6 +143,8 @@ class DashboardRegistrationSerializer(serializers.ModelSerializer):
         return obj.student_name
 
     def get_payment_status(self, obj):
+        if obj.status == 'registered':
+            return 'owing'
         transaction = getattr(obj, 'transaction', None)
         if transaction:
             return transaction.status
@@ -146,7 +154,15 @@ class DashboardRegistrationSerializer(serializers.ModelSerializer):
         return obj.status == 'confirmed' and not hasattr(obj, 'withdrawal')
 
     def get_can_cancel(self, obj):
-        return obj.status == 'pending'
+        return obj.status in ['pending', 'registered']
+
+    def get_can_pay(self, obj):
+        return obj.status == 'registered'
+
+    def get_amount_owing(self, obj):
+        if obj.status == 'registered':
+            return str(obj.trip.cost)
+        return None
 
     def get_withdrawal_status(self, obj):
         withdrawal = getattr(obj, 'withdrawal', None)

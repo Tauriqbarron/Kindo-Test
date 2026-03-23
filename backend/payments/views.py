@@ -139,6 +139,31 @@ class WithdrawView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
+class RegisterOnlyView(APIView):
+    def post(self, request, pk):
+        try:
+            registration = Registration.objects.select_related('trip').get(id=pk)
+        except Registration.DoesNotExist:
+            return Response(
+                {'error': 'Registration not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if registration.status != 'pending':
+            return Response(
+                {'error': 'Only pending registrations can be finalized.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        registration.status = 'registered'
+        registration.save(update_fields=['status', 'updated_at'])
+
+        return Response({
+            'success': True,
+            'registration': RegistrationDetailSerializer(registration).data,
+        })
+
+
 class CancelRegistrationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -153,9 +178,9 @@ class CancelRegistrationView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if registration.status != 'pending':
+        if registration.status not in ['pending', 'registered']:
             return Response(
-                {'error': 'Only pending registrations can be cancelled.'},
+                {'error': 'Only pending or registered registrations can be cancelled.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
