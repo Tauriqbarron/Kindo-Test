@@ -66,6 +66,8 @@ class PaymentService:
             'amount': float(amount),
             'school_id': trip.school_id,
             'activity_id': trip.activity_id,
+            'student_name': registration.student_name,
+            'parent_name': registration.parent_name,
         }
 
         logger.info(

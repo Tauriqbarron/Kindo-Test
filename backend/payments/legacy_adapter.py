@@ -15,7 +15,13 @@ class LegacyPaymentAdapter(PaymentGateway):
         self._processor = LegacyPaymentProcessor()
 
     def process(self, payment_data: dict) -> dict:
-        return self._processor.process_payment(payment_data)
+        response = self._processor.process_payment(payment_data)
+        return {
+            'success': response.success,
+            'transaction_ref': response.transaction_id,
+            'error_message': response.error_message,
+            'amount_charged': payment_data['amount'] if response.success else None,
+        }
 
     def refund(self, refund_data: dict) -> dict:
         """
