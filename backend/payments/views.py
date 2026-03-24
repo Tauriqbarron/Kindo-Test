@@ -1,11 +1,13 @@
 import logging
 
+from django.db import transaction
+
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import AccountCredit, Registration, Trip
+from .models import AccountCredit, Registration, Trip, Withdrawal
 from .serializers import (
     AccountCreditSerializer,
     DashboardRegistrationSerializer,
@@ -111,20 +113,23 @@ class WithdrawView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if hasattr(registration, 'withdrawal'):
-            return Response(
-                {'error': 'This registration has already been withdrawn.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer = WithdrawRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         resolution = serializer.validated_data['resolution']
-        service = WithdrawalService()
-        withdrawal, success = service.process_withdrawal(
-            registration, resolution, request.user,
-        )
+
+        with transaction.atomic():
+            # Lock the registration row to prevent concurrent withdrawals
+            locked_reg = Registration.objects.select_for_update().get(pk=pk)
+            if Withdrawal.objects.filter(registration=locked_reg).exists():
+                return Response(
+                    {'error': 'This registration has already been withdrawn.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            service = WithdrawalService()
+            withdrawal, success = service.process_withdrawal(
+                locked_reg, resolution, request.user,
+            )
 
         if success:
             return Response({

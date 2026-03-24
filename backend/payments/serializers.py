@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from rest_framework import serializers
 
 from accounts.models import Child
@@ -111,7 +113,13 @@ class RegistrationSerializer(serializers.ModelSerializer):
             )
             validated_data.setdefault("parent_email", user.email)
 
-        return super().create(validated_data)
+        with transaction.atomic():
+            trip = Trip.objects.select_for_update().get(pk=validated_data["trip"].pk)
+            if trip.is_full:
+                raise serializers.ValidationError(
+                    {"trip": "This trip is full."}
+                )
+            return super().create(validated_data)
 
 
 class RegistrationDetailSerializer(serializers.ModelSerializer):
