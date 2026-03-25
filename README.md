@@ -66,8 +66,6 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-See [PLANNING.md](PLANNING.md) for the full list of environment variables.
-
 ### Backend
 
 ```bash
@@ -151,6 +149,6 @@ Claude Code was used as a coding assistant throughout development for:
 - Writing boilerplate (models, serializers, test scaffolding)
 - Generating test cases from existing implementation code
 - Tailwind CSS utility class composition
-- Reviewing architecture decisions documented in PLANNING.md
+- Reviewing architecture decisions
 
 All code was reviewed and validated before committing. The planning, architecture decisions, and design patterns were human-directed.
