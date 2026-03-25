@@ -5,7 +5,7 @@ from django.test import TestCase
 
 from payments.card_details import CardDetails
 from payments.models import Registration, Transaction, Trip
-from payments.payment_gateway import PaymentGateway
+from payments.payment_gateway import PaymentGateway, ProcessResult, RefundResult
 from payments.services import PaymentService
 
 
@@ -16,27 +16,27 @@ class FakePaymentGateway(PaymentGateway):
         self._success = success
         self._transaction_ref = transaction_ref
 
-    def process(self, payment_data: dict) -> dict:
+    def process(self, payment_data: dict) -> ProcessResult:
         if self._success:
-            return {
-                'success': True,
-                'transaction_ref': self._transaction_ref,
-                'error_message': None,
-                'amount_charged': payment_data['amount'],
-            }
-        return {
-            'success': False,
-            'transaction_ref': None,
-            'error_message': 'Declined by test gateway',
-            'amount_charged': None,
-        }
+            return ProcessResult(
+                success=True,
+                transaction_ref=self._transaction_ref,
+                error_message=None,
+                amount_charged=payment_data['amount'],
+            )
+        return ProcessResult(
+            success=False,
+            transaction_ref=None,
+            error_message='Declined by test gateway',
+            amount_charged=None,
+        )
 
-    def refund(self, refund_data: dict) -> dict:
-        return {
-            'success': self._success,
-            'refund_ref': 'RF-FAKE-123',
-            'error_message': None if self._success else 'Refund declined by test gateway',
-        }
+    def refund(self, refund_data: dict) -> RefundResult:
+        return RefundResult(
+            success=self._success,
+            refund_ref='RF-FAKE-123',
+            error_message=None if self._success else 'Refund declined by test gateway',
+        )
 
 
 def make_registration():

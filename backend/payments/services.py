@@ -84,7 +84,7 @@ class PaymentService:
             gateway_result=gateway_result,
         )
 
-        if gateway_result['success']:
+        if gateway_result.success:
             logger.info(
                 'Payment successful: ref=%s, registration=%s',
                 transaction_obj.transaction_ref, registration.id,
@@ -92,10 +92,10 @@ class PaymentService:
         else:
             logger.warning(
                 'Payment failed: registration=%s, error=%s',
-                registration.id, gateway_result.get('error_message'),
+                registration.id, gateway_result.error_message,
             )
 
-        return transaction_obj, gateway_result['success']
+        return transaction_obj, gateway_result.success
 
     def _record_credit_only_transaction(self, registration, amount):
         from django.utils import timezone

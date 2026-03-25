@@ -88,7 +88,7 @@ class WithdrawalService:
             'amount': float(amount),
         })
 
-        if refund_result['success']:
+        if refund_result.success:
             return Withdrawal.objects.create(
                 registration=registration,
                 amount=amount,

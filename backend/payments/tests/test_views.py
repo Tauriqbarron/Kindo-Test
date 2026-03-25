@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import Child
 from payments.models import Registration, Transaction, Trip
+from payments.payment_gateway import ProcessResult
 
 
 def make_trip(**overrides):
@@ -111,19 +112,19 @@ class RegistrationDetailViewTest(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-FAKE_GATEWAY_SUCCESS = {
-    'success': True,
-    'transaction_ref': 'TX-TEST-123',
-    'error_message': None,
-    'amount_charged': 45.00,
-}
+FAKE_GATEWAY_SUCCESS = ProcessResult(
+    success=True,
+    transaction_ref='TX-TEST-123',
+    error_message=None,
+    amount_charged=45.00,
+)
 
-FAKE_GATEWAY_FAILURE = {
-    'success': False,
-    'transaction_ref': None,
-    'error_message': 'Declined by issuing bank',
-    'amount_charged': None,
-}
+FAKE_GATEWAY_FAILURE = ProcessResult(
+    success=False,
+    transaction_ref=None,
+    error_message='Declined by issuing bank',
+    amount_charged=None,
+)
 
 
 class PaymentViewTest(TestCase):
