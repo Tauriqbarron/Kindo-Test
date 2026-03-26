@@ -1,0 +1,84 @@
+erDiagram
+    USER ||--o{ CHILD : "has children"
+    USER ||--o{ REGISTRATION : "creates"
+    USER ||--o{ ACCOUNT_CREDIT : "earns/spends"
+
+    CHILD ||--o{ REGISTRATION : "enrolled in"
+
+    TRIP ||--o{ REGISTRATION : "has"
+
+    REGISTRATION ||--o| TRANSACTION : "paid via"
+    REGISTRATION ||--o| WITHDRAWAL : "withdrawn via"
+    REGISTRATION ||--o{ ACCOUNT_CREDIT : "generates"
+
+    USER {
+        int id PK
+        string username
+        string email
+        string password
+    }
+
+    CHILD {
+        uuid id PK
+        uuid parent_id FK
+        string name
+        string grade
+        datetime created_at
+    }
+
+    TRIP {
+        uuid id PK
+        string title
+        string description
+        string destination
+        date date
+        decimal cost
+        string school_id
+        string activity_id
+        int capacity
+        date registration_close_date
+        date payment_due_date
+    }
+
+    REGISTRATION {
+        uuid id PK
+        uuid trip_id FK
+        uuid parent_id FK
+        uuid child_id FK
+        string student_name
+        string parent_name
+        string parent_email
+        string parent_phone
+        string status "pending|registered|confirmed|failed|cancelled"
+        datetime created_at
+    }
+
+    TRANSACTION {
+        uuid id PK
+        uuid registration_id FK "OneToOne"
+        decimal amount
+        string status "success|failed|pending"
+        string transaction_ref
+        string error_message
+        string card_last_four
+        datetime processed_at
+    }
+
+    WITHDRAWAL {
+        uuid id PK
+        uuid registration_id FK "OneToOne"
+        decimal amount
+        string resolution "credit|refund"
+        string status "completed|pending|failed"
+        datetime processed_at
+    }
+
+    ACCOUNT_CREDIT {
+        uuid id PK
+        uuid user_id FK
+        uuid registration_id FK "nullable"
+        decimal amount
+        string reason "withdrawal|payment"
+        string note
+        datetime created_at
+    }

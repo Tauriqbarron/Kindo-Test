@@ -1,0 +1,82 @@
+flowchart TB
+    START([User visits /trips]) --> TRIP_LIST[TripDetailsStep<br/>Browse available trips]
+
+    TRIP_LIST --> SELECT_TRIP{Select a trip}
+    SELECT_TRIP --> TRIP_FULL{Trip full?}
+
+    TRIP_FULL -->|Yes| SOLD_OUT[Show sold out message]
+    TRIP_FULL -->|No| REG_CLOSED{Registration<br/>closed?}
+
+    REG_CLOSED -->|Yes| CLOSED[Show closed message]
+    REG_CLOSED -->|No| REG_STEP[RegistrationStep<br/>Enter student details]
+
+    REG_STEP --> HAS_CHILD{Has saved<br/>children?}
+    HAS_CHILD -->|Yes| SELECT_CHILD[Select existing child]
+    HAS_CHILD -->|No| ADD_CHILD[Add new child]
+
+    SELECT_CHILD --> FILL_FORM[Auto-fill registration form]
+    ADD_CHILD --> FILL_FORM
+
+    FILL_FORM --> SUBMIT_REG[Submit Registration<br/>POST /api/registrations/]
+    SUBMIT_REG --> PAY_CHOICE{Pay now or<br/>register only?}
+
+    PAY_CHOICE -->|Register Only| REG_ONLY["POST /api/registrations/[id]/register-only/"]
+    REG_ONLY --> REG_CONFIRM[RegisteredConfirmationStep<br/>Status: registered]
+
+    PAY_CHOICE -->|Pay Now| PAYMENT_STEP[PaymentStep<br/>Enter card details]
+
+    PAYMENT_STEP --> HAS_CREDIT{Has account<br/>credit?}
+    HAS_CREDIT -->|Yes| APPLY_CREDIT{Apply credit<br/>to payment?}
+    HAS_CREDIT -->|No| ENTER_CARD[Enter card details]
+
+    APPLY_CREDIT -->|Yes| CREDIT_COVERS{Credit covers<br/>full cost?}
+    APPLY_CREDIT -->|No| ENTER_CARD
+
+    CREDIT_COVERS -->|Yes| PAY_CREDIT_ONLY[Pay with credit only<br/>No card needed]
+    CREDIT_COVERS -->|No| ENTER_CARD_PARTIAL[Enter card for<br/>remaining balance]
+
+    ENTER_CARD --> PROCESS_PAY
+    ENTER_CARD_PARTIAL --> PROCESS_PAY
+    PAY_CREDIT_ONLY --> PROCESS_PAY
+
+    PROCESS_PAY[Process Payment<br/>POST /api/payments/] --> PAY_RESULT{Payment<br/>success?}
+
+    PAY_RESULT -->|Yes| CONFIRM[ConfirmationStep<br/>Status: confirmed]
+    PAY_RESULT -->|No| ERROR[Show error<br/>Retry payment]
+    ERROR --> PAYMENT_STEP
+
+    REG_CONFIRM --> DASH["View Dashboard"]
+    CONFIRM --> DASH["View Dashboard"]
+    REG_CONFIRM --> TRIPS["View Trips"]
+    CONFIRM --> TRIPS["View Trips"]
+
+    style START fill:#e1f5fe,color:#333
+    style CONFIRM fill:#c8e6c9,color:#333
+    style REG_CONFIRM fill:#c8e6c9,color:#333
+    style ERROR fill:#ffcdd2,color:#333
+    style SOLD_OUT fill:#ffcdd2,color:#333
+    style CLOSED fill:#ffcdd2,color:#333
+    style DASH fill:#e1f5fe,color:#333
+    style TRIPS fill:#e1f5fe,color:#333
+
+    style TRIP_LIST color:#fff
+    style SELECT_TRIP color:#fff
+    style TRIP_FULL color:#fff
+    style REG_CLOSED color:#fff
+    style REG_STEP color:#fff
+    style HAS_CHILD color:#fff
+    style SELECT_CHILD color:#fff
+    style ADD_CHILD color:#fff
+    style FILL_FORM color:#fff
+    style SUBMIT_REG color:#fff
+    style PAY_CHOICE color:#fff
+    style REG_ONLY color:#fff
+    style PAYMENT_STEP color:#fff
+    style HAS_CREDIT color:#fff
+    style APPLY_CREDIT color:#fff
+    style CREDIT_COVERS color:#fff
+    style PAY_CREDIT_ONLY color:#fff
+    style ENTER_CARD color:#fff
+    style ENTER_CARD_PARTIAL color:#fff
+    style PROCESS_PAY color:#fff
+    style PAY_RESULT color:#fff

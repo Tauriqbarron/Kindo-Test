@@ -1,0 +1,42 @@
+stateDiagram-v2
+    [*] --> pending : POST /api/registrations/
+
+    pending --> registered : Register Only<br/>(no payment)
+    pending --> confirmed : Payment Success
+    pending --> failed : Payment Failed
+    pending --> cancelled : Cancel Registration
+
+    registered --> confirmed : Pay Later<br/>(POST /api/payments/)
+    registered --> failed : Payment Failed
+    registered --> cancelled : Cancel Registration
+
+    confirmed --> cancelled : Withdrawal<br/>(credit or refund)
+
+    failed --> [*] : Terminal state
+
+    cancelled --> [*] : Terminal state
+
+    state pending {
+        [*] --> awaiting_action
+        awaiting_action : Can pay now or register only
+        awaiting_action : can_pay = true
+        awaiting_action : can_cancel = true
+    }
+
+    state registered {
+        [*] --> awaiting_payment
+        awaiting_payment : Registered without payment
+        awaiting_payment : can_pay = true
+        awaiting_payment : can_cancel = true
+    }
+
+    state confirmed {
+        [*] --> fully_paid
+        fully_paid : Payment completed
+        fully_paid : can_withdraw = true
+        fully_paid : can_pay = false
+    }
+
+    note right of pending : Created when parent<br/>selects a trip
+    note right of confirmed : Withdrawal creates<br/>AccountCredit or<br/>refund to card
+    note left of failed : Can retry by creating<br/>a new registration

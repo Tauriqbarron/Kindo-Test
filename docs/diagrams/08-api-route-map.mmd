@@ -1,0 +1,81 @@
+flowchart LR
+    ROOT["/api/"] --> AUTH_GROUP
+    ROOT --> TRIP_GROUP
+    ROOT --> REG_GROUP
+    ROOT --> PAY_GROUP
+    ROOT --> CREDIT_GROUP
+    ROOT --> CHILD_GROUP
+
+    subgraph AUTH_GROUP["Authentication"]
+        direction TB
+        SIGNUP["POST /auth/signup/<br/>Create account + token"]
+        LOGIN["POST /auth/login/<br/>Obtain token"]
+        LOGOUT["POST /auth/logout/<br/>Revoke token 🔒"]
+        ME["GET /auth/me/<br/>Current user info 🔒"]
+    end
+
+    subgraph TRIP_GROUP["Trips"]
+        direction TB
+        TRIP_LIST["GET /trips/<br/>List all trips"]
+        TRIP_DETAIL["GET /trips/{id}/<br/>Trip details + spots"]
+    end
+
+    subgraph REG_GROUP["Registrations"]
+        direction TB
+        REG_CREATE["POST /registrations/<br/>Create registration"]
+        REG_DETAIL["GET /registrations/{id}/<br/>Registration details"]
+        REG_ONLY["POST /registrations/{id}/register-only/<br/>Register without payment"]
+        REG_WITHDRAW["POST /registrations/{id}/withdraw/<br/>Withdraw + refund/credit 🔒"]
+        REG_CANCEL["POST /registrations/{id}/cancel/<br/>Cancel pending reg"]
+    end
+
+    subgraph PAY_GROUP["Payments"]
+        direction TB
+        PAY_CREATE["POST /payments/<br/>Process card payment"]
+    end
+
+    subgraph CREDIT_GROUP["Credits"]
+        direction TB
+        CREDIT_LIST["GET /credits/<br/>Credit history 🔒"]
+        CREDIT_BAL["GET /credits/balance/<br/>Current balance 🔒"]
+    end
+
+    subgraph CHILD_GROUP["Children"]
+        direction TB
+        CHILD_LIST["GET/POST /children/<br/>List or add children 🔒"]
+        CHILD_DETAIL["GET/PUT/DELETE /children/{id}/<br/>Manage child 🔒"]
+    end
+
+    subgraph DASH_GROUP["Dashboard"]
+        direction TB
+        DASHBOARD["GET /dashboard/<br/>All registrations 🔒"]
+    end
+
+    ROOT --> DASH_GROUP
+
+    style AUTH_GROUP fill:#e8eaf6,color:#333
+    style TRIP_GROUP fill:#e0f2f1,color:#333
+    style REG_GROUP fill:#fff3e0,color:#333
+    style PAY_GROUP fill:#fce4ec,color:#333
+    style CREDIT_GROUP fill:#f3e5f5,color:#333
+    style CHILD_GROUP fill:#e8f5e9,color:#333
+    style DASH_GROUP fill:#fffde7,color:#333
+
+    style ROOT color:#fff
+    style SIGNUP color:#fff
+    style LOGIN color:#fff
+    style LOGOUT color:#fff
+    style ME color:#fff
+    style TRIP_LIST color:#fff
+    style TRIP_DETAIL color:#fff
+    style REG_CREATE color:#fff
+    style REG_DETAIL color:#fff
+    style REG_ONLY color:#fff
+    style REG_WITHDRAW color:#fff
+    style REG_CANCEL color:#fff
+    style PAY_CREATE color:#fff
+    style CREDIT_LIST color:#fff
+    style CREDIT_BAL color:#fff
+    style CHILD_LIST color:#fff
+    style CHILD_DETAIL color:#fff
+    style DASHBOARD color:#fff

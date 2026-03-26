@@ -1,0 +1,62 @@
+sequenceDiagram
+    participant UI as React PaymentStep
+    participant API as DRF PaymentView
+    participant PS as PaymentService
+    participant CD as CardDetails
+    participant AC as AccountCredit
+    participant GW as PaymentGateway
+    participant TR as TransactionRecorder
+    participant RU as RegistrationUpdater
+    participant DB as Database
+
+    UI->>API: POST /api/payments/<br/>{registration_id, card, use_credit}
+    API->>CD: CardDetails(number, expiry, cvv)
+
+    alt Card validation fails
+        CD-->>API: CardValidationError
+        API-->>UI: 400 Bad Request
+    end
+
+    API->>PS: process_payment(registration, card_details, use_credit, user)
+
+    Note over PS,DB: BEGIN transaction.atomic()
+
+    alt use_credit = true
+        PS->>AC: balance_for_user(user)
+        AC->>DB: SELECT SUM(amount)
+        DB-->>AC: balance
+        AC-->>PS: credit_applied = min(balance, cost)
+        Note over PS: amount_due = cost - credit_applied
+    end
+
+    alt amount_due > 0
+        PS->>GW: process(payment_data)
+        GW-->>PS: ProcessResult{success, ref, error}
+
+        PS->>TR: record(registration, amount, last_four, result)
+        TR->>DB: CREATE Transaction
+        DB-->>TR: transaction_obj
+        TR-->>PS: transaction_obj
+
+        alt success AND credit_applied > 0
+            PS->>DB: CREATE AccountCredit (negative amount)
+        end
+    else amount_due = 0 (fully covered by credit)
+        PS->>DB: CREATE Transaction (amount=0, ref=CREDIT-xxx)
+        PS->>DB: CREATE AccountCredit (negative amount)
+    end
+
+    PS->>RU: update(registration, success)
+    RU->>DB: UPDATE Registration.status
+
+    Note over PS,DB: END transaction.atomic()
+
+    PS-->>API: (transaction, success)
+
+    alt success
+        API-->>UI: 200 {transaction, registration}
+        UI->>UI: dispatch PAYMENT_SUCCESS
+    else failure
+        API-->>UI: 400 {error}
+        UI->>UI: dispatch PAYMENT_FAILURE
+    end

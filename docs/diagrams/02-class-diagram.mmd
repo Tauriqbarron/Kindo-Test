@@ -1,0 +1,82 @@
+classDiagram
+    class PaymentGateway {
+        <<abstract>>
+        +process(payment_data dict) ProcessResult*
+        +refund(refund_data dict) RefundResult*
+    }
+
+    class ProcessResult {
+        <<dataclass>>
+        +bool success
+        +str transaction_ref
+        +str error_message
+        +float amount_charged
+    }
+
+    class RefundResult {
+        <<dataclass>>
+        +bool success
+        +str refund_ref
+        +str error_message
+    }
+
+    class LegacyPaymentAdapter {
+        -LegacyPaymentProcessor processor
+        +process(payment_data dict) ProcessResult
+        +refund(refund_data dict) RefundResult
+    }
+
+    class PaymentService {
+        -PaymentGateway gateway
+        -TransactionRecorder recorder
+        -RegistrationUpdater updater
+        +__init__(gateway, recorder, updater)
+        +process_payment(registration, card_details, use_credit, user)
+        -_charge_card(registration, card_details, amount)
+        -_record_credit_only_transaction(registration, amount)
+    }
+
+    class WithdrawalService {
+        -PaymentGateway gateway
+        +__init__(gateway)
+        +process_withdrawal(registration, resolution, user)
+        -_process_credit(registration, amount, user)
+        -_process_refund(registration, amount, user)
+    }
+
+    class TransactionRecorder {
+        +record(registration, amount, card_last_four, gateway_result) Transaction
+    }
+
+    class RegistrationUpdater {
+        +update(registration, success) void
+    }
+
+    class CardDetails {
+        +str card_number
+        +str expiry_date
+        +str cvv
+        +validate() void
+        +last_four() str
+        -_validate_card_number() void
+        -_validate_expiry_date() void
+        -_validate_cvv() void
+        -_luhn_check(number str) bool$
+    }
+
+    class CardValidationError {
+        +str message
+    }
+
+    PaymentGateway <|.. LegacyPaymentAdapter : implements
+    PaymentGateway ..> ProcessResult : returns
+    PaymentGateway ..> RefundResult : returns
+
+    PaymentService --> PaymentGateway : gateway
+    PaymentService --> TransactionRecorder : recorder
+    PaymentService --> RegistrationUpdater : updater
+    PaymentService ..> CardDetails : uses
+
+    WithdrawalService --> PaymentGateway : gateway
+
+    CardDetails ..> CardValidationError : throws

@@ -1,0 +1,50 @@
+sequenceDiagram
+    participant UI as React WithdrawModal
+    participant API as DRF WithdrawView
+    participant WS as WithdrawalService
+    participant GW as PaymentGateway
+    participant DB as Database
+
+    UI->>API: POST /api/registrations/{id}/withdraw/<br/>{resolution: "credit"|"refund"}
+
+    API->>DB: select_for_update() Registration
+    Note over API,DB: Race condition protection
+
+    alt Registration not confirmed
+        API-->>UI: 400 "Only confirmed registrations"
+    end
+
+    API->>WS: process_withdrawal(registration, resolution, user)
+
+    Note over WS,DB: BEGIN transaction.atomic()
+
+    alt resolution = "credit"
+        WS->>DB: CREATE AccountCredit<br/>(+amount, reason=withdrawal)
+        WS->>DB: CREATE Withdrawal<br/>(resolution=credit, status=completed)
+    else resolution = "refund"
+        WS->>DB: GET Transaction.transaction_ref
+        WS->>GW: refund({transaction_ref, amount})
+        GW-->>WS: RefundResult{success, refund_ref, error}
+
+        alt refund success
+            WS->>DB: CREATE Withdrawal<br/>(resolution=refund, status=completed)
+        else refund failed
+            WS->>DB: CREATE Withdrawal<br/>(resolution=refund, status=failed)
+        end
+    end
+
+    alt withdrawal.status = completed
+        WS->>DB: UPDATE Registration.status = cancelled
+    end
+
+    Note over WS,DB: END transaction.atomic()
+
+    WS-->>API: (withdrawal, success)
+
+    alt success
+        API-->>UI: 200 {withdrawal, registration}
+        UI->>UI: Close modal, refresh dashboard
+    else failure
+        API-->>UI: 400 {error}
+        UI->>UI: Show error message
+    end

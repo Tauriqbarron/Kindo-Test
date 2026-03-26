@@ -54,6 +54,9 @@ FS Eng Challenge.pdf
 software-principles.html
 solid-principles.html
 
+# Docs
+docs/SECURITY_AUDIT.md
+
 # Testing
 .coverage
 htmlcov/

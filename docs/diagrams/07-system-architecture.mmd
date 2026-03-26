@@ -1,0 +1,76 @@
+flowchart TB
+    subgraph Frontend["Frontend (React 19 + TypeScript + Vite)"]
+        direction TB
+        Pages["Pages<br/>Login | Signup | Dashboard | TripWizard"]
+        Components["Components<br/>PaymentWizard | WithdrawModal | ChildManager"]
+        State["State Management<br/>useReducer (wizard) | AuthContext"]
+        APIClient["API Client<br/>fetch + Token Auth headers"]
+
+        Pages --> Components
+        Components --> State
+        Components --> APIClient
+    end
+
+    subgraph Backend["Backend (Django 6.0 + DRF)"]
+        direction TB
+        Auth["Token Authentication<br/>DRF TokenAuthentication"]
+        Views["API Views<br/>ListAPIView | CreateAPIView | APIView"]
+        Serializers["Serializers<br/>Validation + Data Transform"]
+
+        subgraph Services["Service Layer"]
+            PS["PaymentService<br/>Payment orchestration"]
+            WS["WithdrawalService<br/>Withdrawal orchestration"]
+        end
+
+        subgraph Collaborators["Collaborators (SRP)"]
+            TR["TransactionRecorder"]
+            RU["RegistrationUpdater"]
+            CD["CardDetails<br/>Value Object"]
+        end
+
+        subgraph Gateway["Gateway (DIP)"]
+            PG["PaymentGateway<br/>Abstract Base Class"]
+            LPA["LegacyPaymentAdapter<br/>Bridge Pattern"]
+        end
+
+        Views --> Auth
+        Views --> Serializers
+        Serializers --> Services
+        Services --> Collaborators
+        Services --> Gateway
+    end
+
+    subgraph Data["Data Layer"]
+        ORM["Django ORM<br/>Models + Managers"]
+        DB[(SQLite Database)]
+        ORM --> DB
+    end
+
+    APIClient -->|"HTTP + Token"| Auth
+    Collaborators --> ORM
+    Gateway --> ORM
+    Services --> ORM
+
+    style Frontend fill:#e3f2fd,color:#333
+    style Backend fill:#fff3e0,color:#333
+    style Data fill:#e8f5e9,color:#333
+    style Services fill:#ffe0b2,color:#333
+    style Gateway fill:#ffe0b2,color:#333
+    style Collaborators fill:#ffe0b2,color:#333
+
+    style Pages color:#fff
+    style Components color:#fff
+    style State color:#fff
+    style APIClient color:#fff
+    style Auth color:#fff
+    style Views color:#fff
+    style Serializers color:#fff
+    style PS color:#fff
+    style WS color:#fff
+    style TR color:#fff
+    style RU color:#fff
+    style CD color:#fff
+    style PG color:#fff
+    style LPA color:#fff
+    style ORM color:#fff
+    style DB color:#fff
